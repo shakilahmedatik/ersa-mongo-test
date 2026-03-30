@@ -1,15 +1,15 @@
-import { app } from "./app";
-import { env } from "./config/env";
-import { connectDatabases } from "./database/connections";
-import { getAuth } from "./modules/auth/auth.instance";
+import { app } from "./app/app";
+import { bootstrapApplication, registerProcessHandlers } from "./app/bootstrap";
+import { getEnv } from "./config/env";
 
-const startup = Promise.all([connectDatabases(), getAuth()]);
+registerProcessHandlers();
+await bootstrapApplication();
+
+const env = getEnv();
 
 export default {
   port: env.port,
-  async fetch(request: Request) {
-    await startup;
-
+  fetch(request: Request) {
     return app.fetch(request);
   },
 };

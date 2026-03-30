@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { AppBindings } from "../../types/app";
+import type { AppBindings } from "../../app/bindings";
 import { authService } from "./auth.service";
 import { parseLoginInput, parseSignUpInput } from "./auth.validation";
 

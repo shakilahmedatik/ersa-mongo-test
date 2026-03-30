@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from "hono";
-import { authService } from "../modules/auth/auth.service";
-import type { AppBindings } from "../types/app";
+import type { AppBindings } from "../app/bindings";
+import { authService } from "../features/auth/auth.service";
 
 export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
   context,

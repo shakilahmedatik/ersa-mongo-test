@@ -1,5 +1,6 @@
-import { env } from "../../config/env";
-import { getAuth } from "./auth.instance";
+import { getEnv } from "../../config/env";
+import { getAuth } from "../../infrastructure/auth/better-auth";
+import { userProfileService } from "../users/user-profile.service";
 import type {
   LoginInput,
   LoginResult,
@@ -7,7 +8,6 @@ import type {
   SignUpInput,
   SignUpResult,
 } from "./auth.types";
-import { userProfileService } from "./profile.service";
 
 const jsonHeaders = (headers: Headers) => {
   const nextHeaders = new Headers(headers);
@@ -22,6 +22,8 @@ const createBetterAuthRequest = (
   method: string,
   body?: SignUpInput | LoginInput,
 ) => {
+  const env = getEnv();
+
   return new Request(new URL(path, env.betterAuthUrl).toString(), {
     method,
     headers: body ? jsonHeaders(request.headers) : request.headers,

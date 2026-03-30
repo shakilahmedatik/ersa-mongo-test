@@ -1,13 +1,15 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
-import { env } from "../../config/env";
+import { getEnv } from "../../config/env";
 import {
   connectDatabases,
   getMongoClient,
   getMongoDatabase,
-} from "../../database/connections";
+} from "../database/mongo";
 
 const createAuth = async () => {
+  const env = getEnv();
+
   await connectDatabases();
 
   const [mongoClient, mongoDatabase] = await Promise.all([

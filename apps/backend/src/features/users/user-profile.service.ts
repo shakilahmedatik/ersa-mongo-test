@@ -1,5 +1,5 @@
-import type { UserProfileDto } from "./auth.types";
-import { UserProfileModel } from "./profile.model";
+import { UserProfileModel } from "./user-profile.model";
+import type { UserProfileDto } from "./user-profile.types";
 
 const toProfileDto = (profile: InstanceType<typeof UserProfileModel>) => {
   return {
