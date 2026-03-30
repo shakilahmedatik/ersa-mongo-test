@@ -4,10 +4,12 @@
     "ignoreUnknown": true,
     "includes": [
       "**",
+      "!**/.git",
       "!**/node_modules",
       "!**/.next",
       "!**/.turbo",
-      "!**/dist"
+      "!**/dist",
+      "!**/out"
     ]
   },
   "formatter": {
@@ -23,6 +25,11 @@
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   }
 }

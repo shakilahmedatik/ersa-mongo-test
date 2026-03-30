@@ -4,6 +4,7 @@ export type AppEnv = {
   mongoUri: string;
   betterAuthSecret: string;
   betterAuthUrl: string;
+  corsOrigins: string[];
   logLevel: "fatal" | "error" | "warn" | "info" | "debug" | "trace";
 };
 
@@ -50,6 +51,20 @@ const parseUrl = (value: string, name: string) => {
   }
 };
 
+const parseOriginList = (value: string, name: string) => {
+  const origins = value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .map((origin) => parseUrl(origin, name));
+
+  if (origins.length === 0) {
+    throw new Error(`${name} must contain at least one valid origin.`);
+  }
+
+  return origins;
+};
+
 const parseLogLevel = (value: string): AppEnv["logLevel"] => {
   if (validLogLevels.has(value as AppEnv["logLevel"])) {
     return value as AppEnv["logLevel"];
@@ -70,6 +85,7 @@ const buildEnv = (): AppEnv => {
       requireString("BETTER_AUTH_URL"),
       "BETTER_AUTH_URL",
     ),
+    corsOrigins: parseOriginList(requireString("CORS_ORIGINS"), "CORS_ORIGINS"),
     logLevel: parseLogLevel(optionalString("LOG_LEVEL", "info")),
   });
 };

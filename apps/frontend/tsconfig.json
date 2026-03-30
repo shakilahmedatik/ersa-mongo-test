@@ -4,6 +4,9 @@
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "jsx": "preserve",
     "incremental": true,
+    "paths": {
+      "@/*": ["./*"]
+    },
     "plugins": [
       {
         "name": "next"

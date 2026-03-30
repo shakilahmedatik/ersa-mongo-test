@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { getEnv } from "../config/env";
 import { authRoutes } from "../features/auth/auth.routes";
 import { authService } from "../features/auth/auth.service";
 import { logger } from "../infrastructure/logging/logger";
@@ -7,6 +9,17 @@ import { sessionMiddleware } from "../middleware/session.middleware";
 import type { AppBindings } from "./bindings";
 
 export const app = new Hono<AppBindings>();
+const env = getEnv();
+const authCors = cors({
+  origin: env.corsOrigins,
+  allowMethods: ["GET", "POST", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+  maxAge: 600,
+});
+
+app.use("/auth/*", authCors);
+app.use("/api/auth/*", authCors);
 
 app.onError((error, context) => {
   const requestLogger = context.var.logger;

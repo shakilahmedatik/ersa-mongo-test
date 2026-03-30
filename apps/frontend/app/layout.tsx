@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
+import { JetBrains_Mono } from "next/font/google";
+import { cn } from "@/lib/utils";
+import { Providers } from "./providers";
 import "./globals.css";
 
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
+
 export const metadata: Metadata = {
-  title: "ersa-chat frontend",
-  description: "Next.js frontend workspace in a Bun-powered Turborepo",
+  title: "Ersa Chat",
+  description: "Static Next.js frontend for client-side authentication flows.",
 };
 
 export default function RootLayout({
@@ -12,8 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className={cn("font-mono", jetbrainsMono.variable)}>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

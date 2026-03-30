@@ -20,6 +20,7 @@ const createAuth = async () => {
   return betterAuth({
     baseURL: env.betterAuthUrl,
     secret: env.betterAuthSecret,
+    trustedOrigins: env.corsOrigins,
     database: mongodbAdapter(mongoDatabase, {
       client: mongoClient,
       transaction: false,
