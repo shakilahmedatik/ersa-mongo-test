@@ -1,4 +1,14 @@
 import { getEnv } from "../config/env";
+import {
+  runKnowledgeIngestionNow,
+  startKnowledgeIngestionWorker,
+  stopKnowledgeIngestionWorker,
+} from "../features/knowledge/knowledge.ingestion";
+import { knowledgeSearch } from "../features/knowledge/knowledge.search";
+import {
+  closeMastraStorage,
+  initializeMastraStorage,
+} from "../infrastructure/ai/mastra/chat.memory";
 import { getAuth } from "../infrastructure/auth/better-auth";
 import {
   closeDatabases,
@@ -6,6 +16,7 @@ import {
   verifyDatabaseConnection,
 } from "../infrastructure/database/mongo";
 import { logger } from "../infrastructure/logging/logger";
+import { getApp } from "./app";
 
 const startupLogger = logger.child({ scope: "startup" });
 
@@ -13,16 +24,105 @@ declare global {
   var __ersaProcessHandlersRegistered: boolean | undefined;
 }
 
-const logFatalAndExit = async (error: unknown, message: string) => {
-  startupLogger.fatal({ err: error }, message);
+const shutdownSteps = [
+  {
+    name: "Mastra storage",
+    run: closeMastraStorage,
+  },
+  {
+    name: "Knowledge search",
+    run: () => knowledgeSearch.close(),
+  },
+  {
+    name: "Knowledge ingestion worker",
+    run: async () => {
+      stopKnowledgeIngestionWorker();
+    },
+  },
+  {
+    name: "Database connections",
+    run: closeDatabases,
+  },
+];
 
-  try {
-    await closeDatabases();
-  } catch (shutdownError) {
-    startupLogger.error(
-      { err: shutdownError },
-      "Failed to close database connections during shutdown",
-    );
+const runShutdownSteps = async () => {
+  let success = true;
+
+  for (const step of shutdownSteps) {
+    try {
+      await step.run();
+    } catch (error) {
+      success = false;
+      startupLogger.error(
+        { err: error },
+        `Failed to close ${step.name.toLowerCase()} during shutdown`,
+      );
+    }
+  }
+
+  return success;
+};
+
+const exitWithFailure = async (error: unknown, message: string) => {
+  startupLogger.fatal({ err: error }, message);
+  await runShutdownSteps();
+  process.exit(1);
+};
+
+const initializeKnowledge = async () => {
+  const knowledgeIndex = await knowledgeSearch.initialize();
+  startKnowledgeIngestionWorker();
+
+  if (!knowledgeIndex.recreated) {
+    return;
+  }
+
+  const job = await runKnowledgeIngestionNow({
+    kind: "full",
+    triggeredBy: "startup",
+  });
+
+  startupLogger.info(
+    {
+      jobId: job?.id,
+      status: job?.status,
+    },
+    "Knowledge vectors rebuilt after index recreation",
+  );
+};
+
+const startupSteps = [
+  {
+    message: "Database connections verified",
+    run: async () => {
+      await connectDatabases();
+      await verifyDatabaseConnection();
+    },
+  },
+  {
+    message: "Knowledge search initialized",
+    run: initializeKnowledge,
+  },
+  {
+    message: "Mastra storage initialized",
+    run: initializeMastraStorage,
+  },
+  {
+    message: "Authentication service initialized",
+    run: getAuth,
+  },
+  {
+    message: "Mastra server initialized",
+    run: getApp,
+  },
+];
+
+const shutdown = async (signal: NodeJS.Signals) => {
+  startupLogger.info({ signal }, "Received shutdown signal");
+
+  if (await runShutdownSteps()) {
+    startupLogger.info("Shutdown completed");
+    process.exit(0);
   }
 
   process.exit(1);
@@ -34,24 +134,12 @@ export const registerProcessHandlers = () => {
   }
 
   process.on("unhandledRejection", (reason) => {
-    void logFatalAndExit(reason, "Unhandled promise rejection");
+    void exitWithFailure(reason, "Unhandled promise rejection");
   });
 
   process.on("uncaughtException", (error) => {
-    void logFatalAndExit(error, "Uncaught exception");
+    void exitWithFailure(error, "Uncaught exception");
   });
-
-  const shutdown = async (signal: NodeJS.Signals) => {
-    startupLogger.info({ signal }, "Received shutdown signal");
-
-    try {
-      await closeDatabases();
-      startupLogger.info("Shutdown completed");
-      process.exit(0);
-    } catch (error) {
-      await logFatalAndExit(error, "Graceful shutdown failed");
-    }
-  };
 
   process.on("SIGINT", () => {
     void shutdown("SIGINT");
@@ -77,14 +165,13 @@ export const bootstrapApplication = async () => {
       "Starting backend application",
     );
 
-    await connectDatabases();
-    await verifyDatabaseConnection();
-    await getAuth();
+    for (const step of startupSteps) {
+      await step.run();
+      startupLogger.info(step.message);
+    }
 
-    startupLogger.info("Database connections verified");
-    startupLogger.info("Authentication service initialized");
     startupLogger.info({ port: env.port }, "Backend application started");
   } catch (error) {
-    await logFatalAndExit(error, "Backend startup failed");
+    await exitWithFailure(error, "Backend startup failed");
   }
 };

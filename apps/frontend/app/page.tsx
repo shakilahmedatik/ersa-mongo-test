@@ -2,94 +2,46 @@ import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 
 const heroButtonClass =
-  "group/button inline-flex h-9 shrink-0 items-center justify-center rounded-none border border-transparent bg-clip-padding px-2.5 text-xs font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50";
-
-const highlights = [
-  {
-    title: "Static by design",
-    description:
-      "The frontend builds to static files, with auth and data work happening in the browser.",
-  },
-  {
-    title: "Better Auth client",
-    description:
-      "Authentication calls are made directly from the client against your backend auth service.",
-  },
-  {
-    title: "TanStack Query mutations",
-    description:
-      "Sign-in and sign-up flows use client-side mutations instead of server actions or route handlers.",
-  },
-];
+  "inline-flex items-center justify-center rounded-full border px-8 py-3.5 text-base font-semibold transition-all";
 
 export default function HomePage() {
   return (
     <>
       <Navbar />
 
-      <main className="min-h-[calc(100vh-73px)] bg-[linear-gradient(180deg,rgba(8,145,178,0.08),transparent_30%),linear-gradient(135deg,rgba(15,23,42,0.12),transparent_55%)] px-6 py-16">
-        <div className="mx-auto flex max-w-6xl flex-col gap-16">
-          <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="space-y-6">
-              <span className="inline-flex w-fit border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                Static frontend
-              </span>
-              <div className="space-y-4">
-                <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-foreground sm:text-6xl">
-                  Ship the UI as static assets and keep auth entirely
-                  client-driven.
-                </h1>
-                <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                  This frontend is configured for static export, uses Better
-                  Auth client for authentication, and relies on TanStack Query
-                  for browser-side mutations.
-                </p>
-              </div>
+      <main className="relative flex min-h-[calc(100vh-65px)] items-center justify-center overflow-hidden bg-[linear-gradient(180deg,rgba(8,145,178,0.08),transparent_30%),linear-gradient(135deg,rgba(15,23,42,0.12),transparent_55%)] px-4 py-14 text-foreground sm:px-6 md:px-8 md:py-16">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.04)_1px,transparent_1px)] bg-[size:44px_44px] opacity-40" />
 
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/sign-up"
-                  className={`${heroButtonClass} bg-primary text-primary-foreground hover:bg-primary/80`}
-                >
-                  Create an account
-                </Link>
-                <Link
-                  href="/sign-in"
-                  className={`${heroButtonClass} border-border bg-background text-foreground hover:bg-muted`}
-                >
-                  Sign in
-                </Link>
-              </div>
-            </div>
+        <div className="pointer-events-none absolute top-[20%] left-[20%] h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[120px]" />
+        <div className="pointer-events-none absolute right-[18%] bottom-[18%] h-64 w-64 translate-x-1/2 translate-y-1/2 rounded-full bg-primary/10 blur-[110px]" />
 
-            <div className="border border-border bg-card p-8">
-              <div className="mb-6 border-b border-border pb-5">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Frontend delivery model
-                </p>
-                <p className="mt-2 text-3xl font-semibold text-foreground">
-                  Export once, deploy anywhere.
-                </p>
-              </div>
+        <section className="relative z-10 mx-auto flex max-w-3xl flex-col items-center text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80">
+            Welcome to
+          </p>
+          <h1 className="mt-4 max-w-4xl text-balance text-5xl font-semibold leading-tight tracking-tight text-foreground sm:text-6xl md:text-7xl">
+            Ersa The Chatbot
+          </h1>
+          <p className="mt-6 max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg">
+            Ask questions, get guided answers, and continue the conversation
+            inside a fast static frontend backed by your AI workspace.
+          </p>
 
-              <div className="space-y-5">
-                {highlights.map((item) => (
-                  <div
-                    key={item.title}
-                    className="border border-border/80 bg-background p-5"
-                  >
-                    <h2 className="text-lg font-semibold text-foreground">
-                      {item.title}
-                    </h2>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {item.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        </div>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              className={`${heroButtonClass} border-transparent bg-primary text-primary-foreground hover:scale-[1.02] hover:bg-primary/85`}
+              href="/chat"
+            >
+              Chat with Ersa
+            </Link>
+            <Link
+              className={`${heroButtonClass} border-border bg-background text-foreground hover:bg-muted`}
+              href="/sign-up"
+            >
+              Join now
+            </Link>
+          </div>
+        </section>
       </main>
     </>
   );

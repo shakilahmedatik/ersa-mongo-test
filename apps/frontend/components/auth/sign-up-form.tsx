@@ -20,7 +20,7 @@ export function SignUpForm() {
 
     try {
       await signUpMutation.mutateAsync({ name, email, password });
-      router.push("/");
+      router.push("/chat");
       router.refresh();
     } catch (error) {
       setFeedback(
@@ -31,48 +31,39 @@ export function SignUpForm() {
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground" htmlFor="name">
-          Name
-        </label>
+      <div className="space-y-2 px-8">
         <Input
+          className="rounded-2xl border-border bg-background/90 px-5 py-7"
           id="name"
           type="text"
           autoComplete="name"
-          placeholder="Your name"
+          placeholder="Full Name"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
         />
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground" htmlFor="email">
-          Email
-        </label>
+      <div className="space-y-2 px-8">
         <Input
+          className="rounded-2xl border-border bg-background/90 px-5 py-7"
           id="email"
           type="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder="Email Address"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
         />
       </div>
 
-      <div className="space-y-2">
-        <label
-          className="text-sm font-medium text-foreground"
-          htmlFor="password"
-        >
-          Password
-        </label>
+      <div className="space-y-2 px-8">
         <Input
+          className="rounded-2xl border-border bg-background/90 px-5 py-7"
           id="password"
           type="password"
           autoComplete="new-password"
-          placeholder="Create a password"
+          placeholder="Password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
@@ -80,18 +71,20 @@ export function SignUpForm() {
       </div>
 
       {feedback ? (
-        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <div className="mx-8 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {feedback}
-        </p>
+        </div>
       ) : null}
 
-      <Button
-        className="w-full"
-        type="submit"
-        disabled={signUpMutation.isPending}
-      >
-        {signUpMutation.isPending ? "Creating account..." : "Create account"}
-      </Button>
+      <div className="px-8 pt-3">
+        <Button
+          className="h-14 w-full rounded-2xl text-base font-semibold"
+          type="submit"
+          disabled={signUpMutation.isPending}
+        >
+          {signUpMutation.isPending ? "Creating account..." : "Join Now"}
+        </Button>
+      </div>
     </form>
   );
 }

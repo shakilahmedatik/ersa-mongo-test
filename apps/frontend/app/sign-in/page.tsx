@@ -1,20 +1,17 @@
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SignInForm } from "@/components/auth/sign-in-form";
-import { Navbar } from "@/components/layout/navbar";
 
 export default function SignInPage() {
   return (
-    <>
-      <Navbar />
-      <AuthShell
-        title="Sign in"
-        description="Use your email and password to access your session from a fully static frontend."
-        alternateHref="/sign-up"
-        alternateLabel="Create one"
-        alternateText="Need an account?"
-      >
-        <SignInForm />
-      </AuthShell>
-    </>
+    <AuthShell
+      alternateHref="/sign-up"
+      alternateLabel="Create one now"
+      alternateText="Don't have an account?"
+      description="Sign in to your Ersa account and jump back into the conversation."
+      eyebrow="Continue your journey"
+      title="Welcome Back"
+    >
+      <SignInForm />
+    </AuthShell>
   );
 }

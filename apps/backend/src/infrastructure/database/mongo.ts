@@ -4,6 +4,14 @@ import { getEnv } from "../../config/env";
 import { createLogger } from "../logging/logger";
 
 const logger = createLogger({ scope: "database" });
+const mongooseReadyStateConnected = 1;
+
+export class DatabaseUnavailableError extends Error {
+  constructor(message = "Database connection is not ready.") {
+    super(message);
+    this.name = "DatabaseUnavailableError";
+  }
+}
 
 declare global {
   var __ersaMongoClientPromise: Promise<MongoClient> | undefined;
@@ -39,12 +47,22 @@ const ensureConnections = () => {
   globalThis.__ersaMongoClientPromise ??= new MongoClient(
     env.mongoUri,
   ).connect();
-  globalThis.__ersaMongoosePromise ??= mongoose.connect(env.mongoUri);
+  globalThis.__ersaMongoosePromise ??= mongoose.connect(env.mongoUri, {
+    dbName: env.mongoDbName,
+  });
 
   return {
     mongoClientPromise: globalThis.__ersaMongoClientPromise,
     mongoosePromise: globalThis.__ersaMongoosePromise,
   };
+};
+
+export const ensureMongooseReady = () => {
+  if (mongoose.connection.readyState !== mongooseReadyStateConnected) {
+    throw new DatabaseUnavailableError(
+      "MongoDB is not connected. Please verify the database connection.",
+    );
+  }
 };
 
 export const getMongoClient = async () => {
@@ -54,15 +72,17 @@ export const getMongoClient = async () => {
 };
 
 export const getMongoDatabase = async () => {
+  const env = getEnv();
   const client = await getMongoClient();
 
-  return client.db();
+  return client.db(env.mongoDbName);
 };
 
 export const connectDatabases = async () => {
   const { mongoClientPromise, mongoosePromise } = ensureConnections();
 
   await Promise.all([mongoClientPromise, mongoosePromise]);
+  ensureMongooseReady();
 };
 
 export const verifyDatabaseConnection = async () => {

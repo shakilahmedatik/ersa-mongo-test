@@ -2,9 +2,21 @@ export type AppEnv = {
   nodeEnv: string;
   port: number;
   mongoUri: string;
+  mongoDbName: string;
   betterAuthSecret: string;
   betterAuthUrl: string;
   corsOrigins: string[];
+  adminEmails: string[];
+  googleGenerativeAiApiKey: string;
+  openRouterApiKey: string;
+  assistantModel: string;
+  knowledgeEmbeddingModel: string;
+  knowledgeEmbeddingDimensions: number;
+  knowledgeVectorIndexName: string;
+  chatRateLimitWindowSeconds: number;
+  chatRateLimitMaxRequests: number;
+  knowledgeIngestionStaleAfterMs: number;
+  knowledgeIngestionProgressFlushEveryDocs: number;
   logLevel: "fatal" | "error" | "warn" | "info" | "debug" | "trace";
 };
 
@@ -43,6 +55,16 @@ const parsePort = (value: string, name: string) => {
   return parsed;
 };
 
+const parsePositiveInteger = (value: string, name: string) => {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer.`);
+  }
+
+  return parsed;
+};
+
 const parseUrl = (value: string, name: string) => {
   try {
     return new URL(value).toString().replace(/\/$/, "");
@@ -65,6 +87,19 @@ const parseOriginList = (value: string, name: string) => {
   return origins;
 };
 
+const parseEmailList = (value: string, name: string) => {
+  const emails = value
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (emails.length === 0) {
+    throw new Error(`${name} must contain at least one email address.`);
+  }
+
+  return emails;
+};
+
 const parseLogLevel = (value: string): AppEnv["logLevel"] => {
   if (validLogLevels.has(value as AppEnv["logLevel"])) {
     return value as AppEnv["logLevel"];
@@ -80,12 +115,45 @@ const buildEnv = (): AppEnv => {
     nodeEnv: optionalString("NODE_ENV", "development"),
     port: parsePort(optionalString("PORT", "3001"), "PORT"),
     mongoUri: requireString("MONGODB_URI"),
+    mongoDbName: requireString("MONGODB_DB_NAME"),
     betterAuthSecret: requireString("BETTER_AUTH_SECRET"),
     betterAuthUrl: parseUrl(
       requireString("BETTER_AUTH_URL"),
       "BETTER_AUTH_URL",
     ),
     corsOrigins: parseOriginList(requireString("CORS_ORIGINS"), "CORS_ORIGINS"),
+    adminEmails: parseEmailList(requireString("ADMIN_EMAILS"), "ADMIN_EMAILS"),
+    googleGenerativeAiApiKey: requireString("GOOGLE_GENERATIVE_AI_API_KEY"),
+    openRouterApiKey: requireString("OPENROUTER_API_KEY"),
+    assistantModel: requireString("MASTRA_ASSISTANT_MODEL"),
+    knowledgeEmbeddingModel: optionalString(
+      "KNOWLEDGE_EMBEDDING_MODEL",
+      "google/gemini-embedding-001",
+    ),
+    knowledgeEmbeddingDimensions: parsePositiveInteger(
+      optionalString("KNOWLEDGE_EMBEDDING_DIMENSIONS", "3072"),
+      "KNOWLEDGE_EMBEDDING_DIMENSIONS",
+    ),
+    knowledgeVectorIndexName: optionalString(
+      "KNOWLEDGE_VECTOR_INDEX_NAME",
+      "knowledge_base_embeddings",
+    ),
+    chatRateLimitWindowSeconds: parsePositiveInteger(
+      optionalString("CHAT_RATE_LIMIT_WINDOW_SECONDS", "3600"),
+      "CHAT_RATE_LIMIT_WINDOW_SECONDS",
+    ),
+    chatRateLimitMaxRequests: parsePositiveInteger(
+      optionalString("CHAT_RATE_LIMIT_MAX_REQUESTS", "30"),
+      "CHAT_RATE_LIMIT_MAX_REQUESTS",
+    ),
+    knowledgeIngestionStaleAfterMs: parsePositiveInteger(
+      optionalString("KNOWLEDGE_INGESTION_STALE_AFTER_MS", "60000"),
+      "KNOWLEDGE_INGESTION_STALE_AFTER_MS",
+    ),
+    knowledgeIngestionProgressFlushEveryDocs: parsePositiveInteger(
+      optionalString("KNOWLEDGE_INGESTION_PROGRESS_FLUSH_EVERY_DOCS", "5"),
+      "KNOWLEDGE_INGESTION_PROGRESS_FLUSH_EVERY_DOCS",
+    ),
     logLevel: parseLogLevel(optionalString("LOG_LEVEL", "info")),
   });
 };
