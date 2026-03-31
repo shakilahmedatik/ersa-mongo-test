@@ -15,6 +15,8 @@ export type AppEnv = {
   knowledgeVectorIndexName: string;
   chatRateLimitWindowSeconds: number;
   chatRateLimitMaxRequests: number;
+  chatMemoryLastMessages: number;
+  chatCompletionMaxTokens: number;
   knowledgeIngestionStaleAfterMs: number;
   knowledgeIngestionProgressFlushEveryDocs: number;
   logLevel: "fatal" | "error" | "warn" | "info" | "debug" | "trace";
@@ -145,6 +147,14 @@ const buildEnv = (): AppEnv => {
     chatRateLimitMaxRequests: parsePositiveInteger(
       optionalString("CHAT_RATE_LIMIT_MAX_REQUESTS", "30"),
       "CHAT_RATE_LIMIT_MAX_REQUESTS",
+    ),
+    chatMemoryLastMessages: parsePositiveInteger(
+      optionalString("CHAT_MEMORY_LAST_MESSAGES", "24"),
+      "CHAT_MEMORY_LAST_MESSAGES",
+    ),
+    chatCompletionMaxTokens: parsePositiveInteger(
+      optionalString("CHAT_COMPLETION_MAX_TOKENS", "2048"),
+      "CHAT_COMPLETION_MAX_TOKENS",
     ),
     knowledgeIngestionStaleAfterMs: parsePositiveInteger(
       optionalString("KNOWLEDGE_INGESTION_STALE_AFTER_MS", "60000"),

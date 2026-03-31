@@ -1,0 +1,122 @@
+services:
+  mongod:
+    image: mongodb/mongodb-community-server:latest
+    container_name: ersa-mongod
+    hostname: mongod.search-community
+    restart: unless-stopped
+    command:
+      - mongod
+      - --config
+      - /etc/mongod.conf
+      - --replSetMember=mongod.search-community:27017
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongod_data:/data/db
+      - ./docker/mongodb/mongod.conf:/etc/mongod.conf:ro
+      - ./docker/mongodb/init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - app_network
+
+  mongot:
+    image: mongodb/mongodb-community-search:latest
+    container_name: ersa-mongot
+    hostname: mongot.search-community
+    restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - /docker-entrypoint/start-mongot.sh
+    ports:
+      - "27028:27028"
+      - "9946:9946"
+    volumes:
+      - mongot_data:/data/mongot
+      - ./docker/mongodb/mongot.conf:/mongot-community/config.default.yml:ro
+      - ./docker/mongodb/pwfile:/run/mongot/pwfile:ro
+      - ./docker/mongodb/start-mongot.sh:/docker-entrypoint/start-mongot.sh:ro
+    depends_on:
+      mongod:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  backend:
+    container_name: ersa-backend
+    build:
+      context: .
+      dockerfile: ./apps/backend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      MONGODB_URI: "${MONGODB_URI:-mongodb://mongod.search-community:27017/ersa-chat?replicaSet=rs0}"
+      MONGODB_DB_NAME: "${MONGODB_DB_NAME:-ersa-chat}"
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET}"
+      BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:3001}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000}"
+      ADMIN_EMAILS: "${ADMIN_EMAILS:-admin@example.com}"
+      GOOGLE_GENERATIVE_AI_API_KEY: "${GOOGLE_GENERATIVE_AI_API_KEY}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY}"
+      MASTRA_ASSISTANT_MODEL: "${MASTRA_ASSISTANT_MODEL:-openrouter/anthropic/claude-haiku-4-5}"
+      KNOWLEDGE_EMBEDDING_MODEL: "${KNOWLEDGE_EMBEDDING_MODEL:-google/gemini-embedding-001}"
+      KNOWLEDGE_EMBEDDING_DIMENSIONS: "${KNOWLEDGE_EMBEDDING_DIMENSIONS:-3072}"
+      KNOWLEDGE_VECTOR_INDEX_NAME: "${KNOWLEDGE_VECTOR_INDEX_NAME:-knowledge_base_embeddings}"
+      CHAT_RATE_LIMIT_WINDOW_SECONDS: "${CHAT_RATE_LIMIT_WINDOW_SECONDS:-3600}"
+      CHAT_RATE_LIMIT_MAX_REQUESTS: "${CHAT_RATE_LIMIT_MAX_REQUESTS:-30}"
+      CHAT_MEMORY_LAST_MESSAGES: "${CHAT_MEMORY_LAST_MESSAGES:-24}"
+      CHAT_COMPLETION_MAX_TOKENS: "${CHAT_COMPLETION_MAX_TOKENS:-2048}"
+      KNOWLEDGE_INGESTION_STALE_AFTER_MS: "${KNOWLEDGE_INGESTION_STALE_AFTER_MS:-1800000}"
+      KNOWLEDGE_INGESTION_PROGRESS_FLUSH_EVERY_DOCS: "${KNOWLEDGE_INGESTION_PROGRESS_FLUSH_EVERY_DOCS:-5}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+    depends_on:
+      mongod:
+        condition: service_healthy
+      mongot:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O /dev/null http://127.0.0.1:3001/ || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks:
+      - app_network
+
+  frontend:
+    container_name: ersa-frontend
+    build:
+      context: .
+      dockerfile: ./apps/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: "${NEXT_PUBLIC_API_BASE_URL:-http://localhost:3001}"
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app_network
+
+volumes:
+  mongod_data:
+  mongot_data:
+
+networks:
+  app_network:
+    driver: bridge

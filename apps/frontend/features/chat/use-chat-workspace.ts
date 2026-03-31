@@ -7,9 +7,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { chatApi, resolveChatStreamUrl } from "./chat.api";
 import { DEFAULT_THREAD_TITLE } from "./chat.constants";
 import type {
-  ChatDescriptor,
   ChatRateLimitStatus,
   ChatThreadSummary,
+  ChatThreadsPayload,
   ChatUiMessage,
 } from "./chat.types";
 import {
@@ -32,7 +32,6 @@ type UseChatWorkspaceResult = {
   activeThreadId: string;
   canCreateThread: boolean;
   deletingThreadId: string;
-  descriptor: ChatDescriptor | undefined;
   globalError: string;
   handleCreateThread: () => void;
   handleDeleteThread: (threadId: string) => Promise<void>;
@@ -53,6 +52,8 @@ type UseChatWorkspaceResult = {
 
 export const useChatWorkspace = (): UseChatWorkspaceResult => {
   const queryClient = useQueryClient();
+  const rateLimitQueryKey = ["chat", "rate-limit"] as const;
+  const threadsQueryKey = ["chat", "threads"] as const;
   const [input, setInput] = useState("");
   const [activeThreadId, setActiveThreadId] = useState("");
   const [messagesThreadId, setMessagesThreadId] = useState("");
@@ -62,22 +63,20 @@ export const useChatWorkspace = (): UseChatWorkspaceResult => {
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const hasCreatedInitialThread = useRef(false);
 
-  const descriptorQuery = useQuery({
-    queryKey: ["chat", "descriptor"],
-    queryFn: chatApi.getDescriptor,
-    retry: 1,
-  });
   const rateLimitQuery = useQuery({
-    queryKey: ["chat", "rate-limit"],
+    queryKey: rateLimitQueryKey,
     queryFn: chatApi.getRateLimitStatus,
     retry: 1,
-    refetchInterval: 60_000,
-    staleTime: 10_000,
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
   const threadsQuery = useQuery({
-    queryKey: ["chat", "threads"],
+    queryKey: threadsQueryKey,
     queryFn: chatApi.getThreads,
-    staleTime: 30_000,
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const threads = useMemo(() => {
@@ -85,6 +84,50 @@ export const useChatWorkspace = (): UseChatWorkspaceResult => {
   }, [threadsQuery.data?.threads]);
   const resourceId = threadsQuery.data?.resourceId ?? "";
   const activeThread = threads.find((thread) => thread.id === activeThreadId);
+
+  const updateThreadsCache = (
+    updater: (currentThreads: ChatThreadSummary[]) => ChatThreadSummary[],
+  ) => {
+    queryClient.setQueryData<ChatThreadsPayload>(threadsQueryKey, (current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        threads: sortThreadsByLatest(updater(current.threads)),
+      };
+    });
+  };
+
+  const syncRateLimit = async () => {
+    await queryClient.fetchQuery({
+      queryKey: rateLimitQueryKey,
+      queryFn: chatApi.getRateLimitStatus,
+    });
+  };
+
+  const consumeRateLimit = () => {
+    queryClient.setQueryData<ChatRateLimitStatus>(
+      rateLimitQueryKey,
+      (current) => {
+        if (!current) {
+          return current;
+        }
+
+        const resetAtMs = new Date(current.resetAt).getTime();
+        const isExpired = !Number.isNaN(resetAtMs) && resetAtMs <= Date.now();
+
+        return {
+          ...current,
+          remaining: isExpired
+            ? Math.max(0, current.limit - 1)
+            : Math.max(0, current.remaining - 1),
+        };
+      },
+    );
+  };
+
   const transport = useMemo(() => {
     return new DefaultChatTransport({
       api: resolveChatStreamUrl(),
@@ -113,28 +156,27 @@ export const useChatWorkspace = (): UseChatWorkspaceResult => {
 
   const createThreadMutation = useMutation({
     mutationFn: (title?: string) => chatApi.createThread(title),
-    onSuccess: async (payload) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["chat", "threads"],
-      });
+    onSuccess: (payload) => {
+      queryClient.setQueryData<ChatThreadsPayload>(
+        threadsQueryKey,
+        (current) => {
+          const nextThreads = current ? [...current.threads] : [];
+
+          nextThreads.unshift(payload.thread);
+
+          return {
+            resourceId: payload.resourceId,
+            threads: sortThreadsByLatest(nextThreads),
+          };
+        },
+      );
+
       setActiveThreadId(payload.thread.id);
       setMessages([]);
       setMessagesThreadId("");
       setThreadLoadError("");
       setGlobalError("");
       setInput("");
-    },
-  });
-  const updateThreadMutation = useMutation({
-    mutationFn: (value: {
-      threadId: string;
-      title?: string;
-      preview?: string;
-    }) => chatApi.updateThread(value),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["chat", "threads"],
-      });
     },
   });
   const deleteThreadMutation = useMutation({
@@ -244,15 +286,6 @@ export const useChatWorkspace = (): UseChatWorkspaceResult => {
     };
   }, [activeThreadId, setMessages]);
 
-  useEffect(() => {
-    if (status === "ready" && activeThreadId) {
-      void queryClient.invalidateQueries({
-        queryKey: ["chat", "threads"],
-      });
-      void rateLimitQuery.refetch();
-    }
-  }, [activeThreadId, queryClient, rateLimitQuery, status]);
-
   const canCreateThread = useMemo(() => {
     if (threadsQuery.isPending) {
       return false;
@@ -302,8 +335,8 @@ export const useChatWorkspace = (): UseChatWorkspaceResult => {
 
     try {
       await deleteThreadMutation.mutateAsync(threadId);
-      await queryClient.invalidateQueries({
-        queryKey: ["chat", "threads"],
+      updateThreadsCache((currentThreads) => {
+        return currentThreads.filter((thread) => thread.id !== threadId);
       });
 
       const remainingThreads = threads.filter(
@@ -340,6 +373,21 @@ export const useChatWorkspace = (): UseChatWorkspaceResult => {
     setGlobalError("");
     setInput("");
 
+    const cachedRateLimit =
+      queryClient.getQueryData<ChatRateLimitStatus>(rateLimitQueryKey);
+
+    if (cachedRateLimit) {
+      const resetAtMs = new Date(cachedRateLimit.resetAt).getTime();
+
+      if (!Number.isNaN(resetAtMs) && resetAtMs <= Date.now()) {
+        try {
+          await syncRateLimit();
+        } catch {
+          // Keep the current UI responsive even if the sync request fails.
+        }
+      }
+    }
+
     const optimisticMessages = [
       ...messages,
       {
@@ -355,21 +403,35 @@ export const useChatWorkspace = (): UseChatWorkspaceResult => {
     ];
 
     if (messagesThreadId === activeThreadId) {
-      void updateThreadMutation.mutate({
-        threadId: activeThreadId,
-        title:
-          activeThread?.title === DEFAULT_THREAD_TITLE
-            ? getSuggestedThreadTitle(optimisticMessages)
-            : undefined,
-        preview: getThreadPreview(optimisticMessages),
+      const nextTitle =
+        activeThread?.title === DEFAULT_THREAD_TITLE
+          ? getSuggestedThreadTitle(optimisticMessages)
+          : (activeThread?.title ?? DEFAULT_THREAD_TITLE);
+
+      updateThreadsCache((currentThreads) => {
+        return currentThreads.map((thread) => {
+          if (thread.id !== activeThreadId) {
+            return thread;
+          }
+
+          return {
+            ...thread,
+            title: nextTitle,
+            preview: getThreadPreview(optimisticMessages),
+            updatedAt: new Date().toISOString(),
+          };
+        });
       });
     }
+
+    consumeRateLimit();
 
     try {
       await sendMessage({
         text: trimmed,
       });
     } catch (nextError) {
+      void syncRateLimit().catch(() => undefined);
       setGlobalError(resolveAssistantError(nextError));
     }
   };
@@ -379,7 +441,6 @@ export const useChatWorkspace = (): UseChatWorkspaceResult => {
     activeThreadId,
     canCreateThread,
     deletingThreadId,
-    descriptor: descriptorQuery.data,
     globalError:
       globalError ||
       (error
@@ -402,11 +463,7 @@ export const useChatWorkspace = (): UseChatWorkspaceResult => {
     stop,
     threadLoadError:
       threadLoadError ||
-      (threadsQuery.isError
-        ? resolveAssistantError(threadsQuery.error)
-        : descriptorQuery.isError
-          ? resolveAssistantError(descriptorQuery.error)
-          : ""),
+      (threadsQuery.isError ? resolveAssistantError(threadsQuery.error) : ""),
     threads,
   };
 };

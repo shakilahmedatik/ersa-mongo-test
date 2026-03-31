@@ -1,6 +1,5 @@
 import { resolveApiError, resolveApiUrl } from "@/lib/api-client";
 import type {
-  ChatDescriptor,
   ChatHistory,
   ChatRateLimitStatus,
   ChatThreadPayload,
@@ -14,18 +13,6 @@ const getJsonHeaders = () => {
 };
 
 export const chatApi = {
-  async getDescriptor() {
-    const response = await fetch(resolveApiUrl("/chat"), {
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error(await resolveApiError(response));
-    }
-
-    return (await response.json()) as ChatDescriptor;
-  },
-
   async getRateLimitStatus() {
     const response = await fetch(resolveApiUrl("/chat/rate-limit"), {
       credentials: "include",
@@ -58,25 +45,6 @@ export const chatApi = {
       body: JSON.stringify({
         title,
       }),
-    });
-
-    if (!response.ok) {
-      throw new Error(await resolveApiError(response));
-    }
-
-    return (await response.json()) as ChatThreadPayload;
-  },
-
-  async updateThread(input: {
-    threadId: string;
-    title?: string;
-    preview?: string;
-  }) {
-    const response = await fetch(resolveApiUrl("/chat/threads"), {
-      method: "PATCH",
-      credentials: "include",
-      headers: getJsonHeaders(),
-      body: JSON.stringify(input),
     });
 
     if (!response.ok) {

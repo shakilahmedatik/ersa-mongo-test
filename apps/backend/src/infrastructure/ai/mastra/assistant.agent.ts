@@ -29,6 +29,9 @@ Rules:
   model: env.assistantModel,
   defaultOptions: {
     maxSteps: 5,
+    modelSettings: {
+      maxOutputTokens: env.chatCompletionMaxTokens,
+    },
   },
   tools: {
     queryDocs: queryDocsTool,

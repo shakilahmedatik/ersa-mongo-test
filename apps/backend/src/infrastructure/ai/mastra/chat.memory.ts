@@ -34,10 +34,13 @@ export const getMastraStorage = () => {
 };
 
 export const getChatMemory = () => {
+  const env = getEnv();
+
   globalThis.__ersaChatMemory ??= new Memory({
     storage: getMastraStorage(),
     options: {
       generateTitle: true,
+      lastMessages: env.chatMemoryLastMessages,
       workingMemory: {
         enabled: true,
         scope: "resource",
