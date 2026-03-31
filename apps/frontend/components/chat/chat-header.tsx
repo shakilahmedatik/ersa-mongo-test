@@ -1,21 +1,24 @@
 "use client";
 
+// biome-ignore assist/source/organizeImports: Intentionally
 import { LogOutIcon, MenuIcon, SettingsIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useAdminStatusQuery } from "@/features/admin/use-admin";
 import { authClient } from "@/features/auth/auth-client";
 import { useSignOutMutation } from "@/features/auth/use-auth-mutations";
 import type { ChatThreadSummary } from "@/features/chat/chat.types";
 import { cn } from "@/lib/utils";
-
 type ChatHeaderProps = {
   activeThread: ChatThreadSummary | undefined;
   onToggleSidebar: () => void;
@@ -42,6 +45,7 @@ const getInitials = (name?: string | null, email?: string | null) => {
 export function ChatHeader({ activeThread, onToggleSidebar }: ChatHeaderProps) {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const adminStatusQuery = useAdminStatusQuery(Boolean(session?.user));
   const signOutMutation = useSignOutMutation();
 
   const handleSignOut = async () => {
@@ -55,7 +59,7 @@ export function ChatHeader({ activeThread, onToggleSidebar }: ChatHeaderProps) {
   };
 
   return (
-    <header className="flex min-h-[65px] items-center gap-3 border-b border-border bg-background/70 px-4 py-3 backdrop-blur-md sm:px-6">
+    <header className="flex min-h-16.25 items-center gap-3 border-b border-border bg-background/70 px-4 py-3 backdrop-blur-md sm:px-6">
       <Button
         aria-label="Toggle thread list"
         className="size-9 rounded-xl border-border bg-card/80 md:hidden"
@@ -99,24 +103,29 @@ export function ChatHeader({ activeThread, onToggleSidebar }: ChatHeaderProps) {
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="w-64 rounded-2xl p-2">
-            <DropdownMenuLabel className="rounded-xl border border-border bg-background px-4 py-3 text-left">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {session.user.name || "Workspace member"}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {session.user.email}
-              </p>
-            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="rounded-xl border border-border bg-background px-4 py-3 text-left">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {session.user.name || "Workspace member"}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {session.user.email}
+                </p>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator className="my-2" />
-            <DropdownMenuItem
-              className="rounded-xl px-3 py-2.5"
-              onClick={() => {
-                router.push("/admin");
-              }}
-            >
-              <SettingsIcon className="size-4" />
-              Knowledge workspace
-            </DropdownMenuItem>
+
+            {adminStatusQuery.data?.isAdmin ? (
+              <DropdownMenuItem
+                className="rounded-xl px-3 py-2.5"
+                onClick={() => {
+                  router.push("/admin");
+                }}
+              >
+                <SettingsIcon className="size-4" />
+                Knowledge workspace
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator className="my-2" />
             <DropdownMenuItem
               className="rounded-xl px-3 py-2.5"

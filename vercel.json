@@ -2,5 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "bun install --frozen-lockfile",
   "buildCommand": "cd apps/frontend && bun run build",
-  "outputDirectory": "apps/frontend/out"
+  "outputDirectory": "apps/frontend/out",
+  "cleanUrls": true
 }

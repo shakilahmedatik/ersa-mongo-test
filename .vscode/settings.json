@@ -1,0 +1,7 @@
+{
+	"editor.defaultFormatter": "biomejs.biome",
+	"editor.wordWrap": "wordWrapColumn",
+	"editor.codeActionsOnSave": {
+		"source.fixAll.biome": "always"
+	}
+}
