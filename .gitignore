@@ -2,7 +2,6 @@ node_modules
 .turbo
 dist
 .next
-bun.lock
 coverage
 .DS_Store
 .env
