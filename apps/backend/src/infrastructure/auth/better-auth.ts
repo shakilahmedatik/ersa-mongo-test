@@ -9,6 +9,7 @@ import {
 
 const createAuth = async () => {
   const env = getEnv();
+  const crossSiteCookies = env.betterAuthCrossSiteCookies;
 
   await connectDatabases();
 
@@ -25,6 +26,16 @@ const createAuth = async () => {
       client: mongoClient,
       transaction: false,
     }),
+    advanced: crossSiteCookies
+      ? {
+          useSecureCookies: true,
+          defaultCookieAttributes: {
+            sameSite: "none",
+            secure: true,
+            partitioned: true,
+          },
+        }
+      : undefined,
     emailAndPassword: {
       enabled: true,
     },

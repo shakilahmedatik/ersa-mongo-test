@@ -21,6 +21,7 @@ This repo includes [render.yaml](/Users/shakilahmedatik/Development/ersa-chat/re
 - Use MongoDB Atlas for `MONGODB_URI`.
 - Set the frontend `NEXT_PUBLIC_API_BASE_URL` to your deployed backend public URL.
 - Set backend `BETTER_AUTH_URL` to the same backend public URL.
+- Set backend `BETTER_AUTH_CROSS_SITE_COOKIES=true` when frontend and backend are on different domains.
 - Set backend `CORS_ORIGINS` to your deployed frontend public URL.
 
 ### Render backend envs
@@ -30,6 +31,7 @@ Required:
 - `MONGODB_URI`
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
+- `BETTER_AUTH_CROSS_SITE_COOKIES`
 - `CORS_ORIGINS`
 - `ADMIN_EMAILS`
 - `GOOGLE_GENERATIVE_AI_API_KEY`

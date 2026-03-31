@@ -5,6 +5,7 @@ export type AppEnv = {
   mongoDbName: string;
   betterAuthSecret: string;
   betterAuthUrl: string;
+  betterAuthCrossSiteCookies: boolean;
   corsOrigins: string[];
   adminEmails: string[];
   googleGenerativeAiApiKey: string;
@@ -112,6 +113,18 @@ const parseLogLevel = (value: string): AppEnv["logLevel"] => {
   );
 };
 
+const parseBoolean = (value: string, name: string) => {
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  throw new Error(`${name} must be either "true" or "false".`);
+};
+
 const buildEnv = (): AppEnv => {
   return Object.freeze({
     nodeEnv: optionalString("NODE_ENV", "development"),
@@ -122,6 +135,10 @@ const buildEnv = (): AppEnv => {
     betterAuthUrl: parseUrl(
       requireString("BETTER_AUTH_URL"),
       "BETTER_AUTH_URL",
+    ),
+    betterAuthCrossSiteCookies: parseBoolean(
+      optionalString("BETTER_AUTH_CROSS_SITE_COOKIES", "false"),
+      "BETTER_AUTH_CROSS_SITE_COOKIES",
     ),
     corsOrigins: parseOriginList(requireString("CORS_ORIGINS"), "CORS_ORIGINS"),
     adminEmails: parseEmailList(requireString("ADMIN_EMAILS"), "ADMIN_EMAILS"),
